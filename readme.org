@@ -1,6 +1,7 @@
-* About
+* VPN ProxyJump
+** About
 A docker image to run multiple VPNs intended to facilitate ~ProxyJump~ configurations.
-** Usage
+*** Usage
 This is meant to be built locally for now:
 #+begin_src bash
 export PUB_KEY_CONTENT=$(cat ~/.ssh/cstuff.pub)
@@ -51,3 +52,5 @@ Host someone.cstuff
 #+end_src
 
 Which is finally used via ~ssh someone.cstuff~.
+* License
+MIT.
