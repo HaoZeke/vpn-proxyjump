@@ -1,2 +1,23 @@
 * About
 A docker image to run multiple VPNs intended to facilitate ~ProxyJump~ configurations.
+** Usage
+This is meant to be built locally for now:
+#+begin_src bash
+export PUB_KEY_CONTENT=$(cat ~/.ssh/cosmolab.pub)
+docker build \
+  --build-arg USER_PUBLIC_KEY="$PUB_KEY_CONTENT" \
+  --build-arg SSH_USER_NAME=jumphostuser \
+  --pull \
+  -t epfl-smart-jumphost:latest .
+#+end_src
+
+Can be run via:
+
+#+begin_src bash
+docker run --rm -it \
+  --name epfl-smart-jump-container \
+  --cap-add=NET_ADMIN \
+  --device=/dev/net/tun:/dev/net/tun \
+  -p 127.0.0.1:2200:22 \
+  epfl-smart-jumphost:latest
+#+end_src
