@@ -3,7 +3,7 @@ A docker image to run multiple VPNs intended to facilitate ~ProxyJump~ configura
 ** Usage
 This is meant to be built locally for now:
 #+begin_src bash
-export PUB_KEY_CONTENT=$(cat ~/.ssh/cosmolab.pub)
+export PUB_KEY_CONTENT=$(cat ~/.ssh/cstuff.pub)
 docker build \
   --build-arg USER_PUBLIC_KEY="$PUB_KEY_CONTENT" \
   --build-arg SSH_USER_NAME=jumphostuser \
@@ -21,3 +21,33 @@ docker run --rm -it \
   -p 127.0.0.1:2200:22 \
   epfl-smart-jumphost:latest
 #+end_src
+
+Combined with access via:
+#+begin_src bash
+ssh jumphostuser@localhost -p 2200
+# Connect to new machines
+#+end_src
+
+Then a proxy jump can be setup.
+#+begin_src conf
+# EPFL
+######
+
+Host epfl-docker-jump
+    HostName 127.0.0.1
+    Port 2200
+    User jumphostuser
+    IdentitiesOnly yes
+    IdentityFile ~/.ssh/cstuff
+
+Host *.epfl.ch !vpn.epfl.ch
+    User goswami
+    ProxyJump epfl-docker-jump
+
+Host someone.cstuff
+  Hostname something.epfl.ch
+  User goswami
+  ProxyJump epfl-docker-jump
+#+end_src
+
+Which is finally used via ~ssh someone.cstuff~.
