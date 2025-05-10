@@ -11,8 +11,10 @@ ARG USER_PUBLIC_KEY
 RUN apk add --no-cache \
     tini \
     openconnect \
-    openssh-server \
+    tinyssh \
+    ucspi-tcp6 \
     bash \
+    doas \
     ca-certificates
 
 # Create a non-root user for SSH connections INTO the container
@@ -25,34 +27,21 @@ RUN mkdir -p "/home/${SSH_USER_NAME}/.ssh" && \
     chmod 600 "/home/${SSH_USER_NAME}/.ssh/authorized_keys" && \
     chown -R "${SSH_USER_NAME}:${SSH_USER_NAME}" "/home/${SSH_USER_NAME}/.ssh"
 
-# Configure SSHD for security and ProxyJump functionality
-RUN sed -i 's/^#?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && \
-    sed -i 's/^#?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && \
-    sed -i 's/^#?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
-    echo "AllowTcpForwarding yes" >> /etc/ssh/sshd_config && \
-    echo "AllowAgentForwarding yes" >> /etc/ssh/sshd_config && \
-    echo "GatewayPorts no" >> /etc/ssh/sshd_config && \
-    echo "ClientAliveInterval 60" >> /etc/ssh/sshd_config && \
-    echo "ClientAliveCountMax 3" >> /etc/ssh/sshd_config
+# Configure doas: allow SSH_USER_NAME to run openconnect as root without a password.
+# This rule allows openconnect with any arguments. For tighter security, you could restrict args.
+RUN echo "permit nopass ${SSH_USER_NAME} as root cmd /usr/sbin/openconnect" > /etc/doas.conf && \
+    chown root:root /etc/doas.conf && chmod 0400 /etc/doas.conf
 
-# Generate SSH host keys if they don't exist
-RUN ssh-keygen -A
+# Generate host-keys
+RUN tinysshd-makekey /etc/tinyssh/keys
 
 # Expose the SSH port
-EXPOSE 22
+EXPOSE 2200
 
-# Use tini to manage the main process.
-# The CMD will be a shell script that starts sshd and then execs openconnect.
+# Copy the entrypoint script into the image
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Use tini to manage the entrypoint script. The script itself runs as root.
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "\
-set -e; \
-echo 'Starting SSH daemon...'; \
-/usr/sbin/sshd -e; \
-sleep 2; \
-echo 'SSH daemon active. Starting OpenConnect interactively...'; \
-echo 'You will be prompted for your EPFL VPN password.'; \
-exec openconnect vpn.epfl.ch \
-    -u goswami@epfl.ch \
-    --useragent='AnyConnect' \
-    --script=/etc/vpnc/vpnc-script \
-"]
+CMD ["/usr/local/bin/entrypoint.sh"]
