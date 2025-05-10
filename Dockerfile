@@ -18,6 +18,7 @@ RUN apk add --no-cache \
     ca-certificates
 
 # Create a non-root user for SSH connections INTO the container
+# The password isn't really ever required, but causes an error without it
 RUN adduser -g "${SSH_USER_NAME}" -D -s /bin/bash "${SSH_USER_NAME}" && \
     echo "${SSH_USER_NAME}:$(openssl passwd -1 $PASS)" | chpasswd
 
