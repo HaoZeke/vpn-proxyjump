@@ -11,6 +11,8 @@ echo "You will be prompted for your EPFL VPN password."
 # Now, execute OpenConnect in the foreground.
 # This script runs as root by default in Docker, which OpenConnect needs
 # to modify network routes and create the tun interface.
+# The --script flag is vital for DNS/routing updates.
 exec openconnect vpn.epfl.ch \
     -u goswami@epfl.ch \
-    --useragent='AnyConnect'
+   --script=/etc/vpnc/vpnc-script \
+   --useragent='AnyConnect'

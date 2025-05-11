@@ -13,6 +13,7 @@ RUN apk add --no-cache \
     tini \
     openconnect \
     openssh \
+    vpnc \
     openssh-server \
     bash \
     ca-certificates
