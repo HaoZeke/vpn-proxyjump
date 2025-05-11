@@ -37,8 +37,15 @@ fi
 # This script runs as root by default in Docker, which OpenConnect needs
 # to modify network routes and create the tun interface.
 # The --script flag is vital for DNS/routing updates.
+if [ -n "$CONNECT_EXTRA_ARGS" ]; then
 exec openconnect \
-    "${VPN_SERVER_ADDR}" \
-    -u "${VPN_LOGIN_USER}" \
-    --script=/etc/vpnc/vpnc-script \
-    "${CONNECT_EXTRA_ARGS}"
+     "${VPN_SERVER_ADDR}" \
+     -u "${VPN_LOGIN_USER}" \
+     --script=/etc/vpnc/vpnc-script \
+     "${CONNECT_EXTRA_ARGS}"
+else
+exec openconnect \
+     "${VPN_SERVER_ADDR}" \
+     -u "${VPN_LOGIN_USER}" \
+     --script=/etc/vpnc/vpnc-script
+fi
