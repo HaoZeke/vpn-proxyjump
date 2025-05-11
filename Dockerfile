@@ -8,13 +8,22 @@ ARG SSH_USER_NAME=jumphostuser
 ARG USER_PUBLIC_KEY
 ARG PASS=nothing
 
+# Add community repos for openfortivpn
+RUN { \
+    echo "https://dl-cdn.alpinelinux.org/alpine/v$(cut -d'.' -f1,2 /etc/alpine-release)/main"; \
+    echo "https://dl-cdn.alpinelinux.org/alpine/v$(cut -d'.' -f1,2 /etc/alpine-release)/community"; \
+    echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing"; \
+} > /etc/apk/repositories && \
+apk update
+
 # Install necessary packages
 RUN apk add --no-cache \
     tini \
     openconnect \
+    openfortivpn \
     openssh \
-    vpnc \
     openssh-server \
+    vpnc \
     bash \
     ca-certificates
 
@@ -59,13 +68,17 @@ RUN ssh-keygen -A
 # Expose the SSH port
 EXPOSE 22
 
-# --- Environment Variables for OpenConnect ---
+# --- Environment Variables ---
 # These can be overridden at 'docker run' time.
 # VPN_SERVER and VPN_USER are mandatory and should be set by the user at runtime for a generic image.
 # ENV VPN_SERVER="" # No default, user must set
 # ENV VPN_USER=""   # No default, user must set
 # e.g. --useragent=AnyConnect
 ENV OPENCONNECT_EXTRA_ARGS=""
+# VPN_TYPE will default to openconnect if not set.
+# Can be either openconnect or openfortivpn
+ENV VPN_TYPE="openconnect"
+ENV FORTIGATE_EXTRA_ARGS=""
 
 # Copy the entrypoint script into the image
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
