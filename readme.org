@@ -1,6 +1,6 @@
 * VPN ProxyJump
 ** About
-A docker image to run multiple VPNs intended to facilitate ~ProxyJump~ configurations.
+A docker image to run multiple VPNs intended to facilitate ~ProxyJump~ configurations. See [[https://rgoswami.me/posts/remote-access-cvpn/][this post]] for some more conversational details.
 *** Usage
 This is meant to be built locally for now:
 #+begin_src bash
