@@ -59,6 +59,14 @@ RUN ssh-keygen -A
 # Expose the SSH port
 EXPOSE 22
 
+# --- Environment Variables for OpenConnect ---
+# These can be overridden at 'docker run' time.
+# VPN_SERVER and VPN_USER are mandatory and should be set by the user at runtime for a generic image.
+# ENV VPN_SERVER="" # No default, user must set
+# ENV VPN_USER=""   # No default, user must set
+# e.g. --useragent=AnyConnect
+ENV OPENCONNECT_EXTRA_ARGS=""
+
 # Copy the entrypoint script into the image
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
