@@ -9,18 +9,22 @@ docker build \
   --build-arg USER_PUBLIC_KEY="$PUB_KEY_CONTENT" \
   --build-arg SSH_USER_NAME=jumphostuser \
   --pull \
-  -t epfl-smart-jumphost:latest .
+  -t vpn-smart-jumphost:latest .
 #+end_src
 
 Can be run via:
 
 #+begin_src bash
+# e.g. For EPFL
 docker run --rm -it \
   --name epfl-smart-jump-container \
+  -e VPN_SERVER="vpn.epfl.ch" \
+  -e VPN_USER="goswami" \
+  -e OPENCONNECT_EXTRA_ARGS="--useragent=AnyConnect" \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun:/dev/net/tun \
   -p 127.0.0.1:2200:22 \
-  epfl-smart-jumphost:latest
+  vpn-smart-jumphost:latest
 #+end_src
 
 Combined with access via:
