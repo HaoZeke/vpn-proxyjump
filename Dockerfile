@@ -10,10 +10,8 @@ ARG PASS=nothing
 
 # Add community repos for openfortivpn
 RUN { \
-    echo "https://dl-cdn.alpinelinux.org/alpine/v$(cut -d'.' -f1,2 /etc/alpine-release)/main"; \
-    echo "https://dl-cdn.alpinelinux.org/alpine/v$(cut -d'.' -f1,2 /etc/alpine-release)/community"; \
     echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing"; \
-} > /etc/apk/repositories && \
+} >> /etc/apk/repositories && \
 apk update
 
 # Install necessary packages
@@ -21,8 +19,12 @@ RUN apk add --no-cache \
     tini \
     openconnect \
     openfortivpn \
+    ppp \
+    iptables \
+    ppp-pppoe \
     openssh \
     openssh-server \
+    openssh-server-pam \
     vpnc \
     bash \
     ca-certificates
@@ -59,8 +61,7 @@ RUN sed -i 's/^#?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && 
     echo "ChallengeResponseAuthentication no" >> /etc/ssh/sshd_config && \
     \
     echo "ClientAliveInterval 60" >> /etc/ssh/sshd_config && \
-    echo "ClientAliveCountMax 3" >> /etc/ssh/sshd_config && \
-    echo "LogLevel DEBUG3" >> /etc/ssh/sshd_config
+    echo "ClientAliveCountMax 3" >> /etc/ssh/sshd_config
 
 # Generate SSH host keys if they don't exist
 RUN ssh-keygen -A

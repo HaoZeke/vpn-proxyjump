@@ -18,24 +18,29 @@ fi
 echo "Starting SSH daemon..."
 /usr/sbin/sshd -e
 
-echo "SSH daemon active. Starting OpenConnect interactively..."
+echo "SSH daemon active. Starting VPN interactively..."
 
-# Use provided ENV vars, with script-level defaults for some if not set by ENV
-# (though Dockerfile ENV provides defaults for USER_AGENT and SCRIPT_PATH)
+# Use provided ENV vars
 VPN_SERVER_ADDR="${VPN_SERVER}"
 VPN_LOGIN_USER="${VPN_USER}"
 CONNECT_EXTRA_ARGS="${OPENCONNECT_EXTRA_ARGS}"
+FORTI_EXTRA_ARGS="${FORTIGATE_EXTRA_ARGS}"
+VPN_CLIENT_TO_USE="${VPN_TYPE:-openconnect}"
 
-echo "Starting OpenConnect interactively for server: ${VPN_SERVER_ADDR}"
+echo "Starting $VPN_CLIENT_TO_USE interactively for server: ${VPN_SERVER_ADDR}"
 echo "Attempting login as user: ${VPN_LOGIN_USER}"
 echo "You will be prompted for your VPN password."
 if [ -n "$CONNECT_EXTRA_ARGS" ]; then
     echo "Using additional OpenConnect arguments: ${CONNECT_EXTRA_ARGS}"
 fi
+if [ -n "$FORTI_EXTRA_ARGS" ]; then
+    echo "Using additional OpenFortiVPN arguments: ${FORTI_EXTRA_ARGS}"
+fi
 
-# Now, execute OpenConnect in the foreground.
-# This script runs as root by default in Docker, which OpenConnect needs
+# Now, execute a VPN client in the foreground.
+# This script runs as root by default in Docker, which is needed
 # to modify network routes and create the tun interface.
+if [ "${VPN_CLIENT_TO_USE}" = "openconnect" ]; then
 # The --script flag is vital for DNS/routing updates.
 if [ -n "$CONNECT_EXTRA_ARGS" ]; then
 exec openconnect \
@@ -48,4 +53,16 @@ exec openconnect \
      "${VPN_SERVER_ADDR}" \
      -u "${VPN_LOGIN_USER}" \
      --script=/etc/vpnc/vpnc-script
+fi
+elif [ "${VPN_CLIENT_TO_USE}" = "openfortivpn" ]; then
+if [ -n "$FORTI_EXTRA_ARGS" ]; then
+exec openfortivpn \
+     "${VPN_SERVER_ADDR}" \
+     -u "${VPN_LOGIN_USER}" \
+     "${FORTI_EXTRA_ARGS}"
+else
+exec openfortivpn \
+     "${VPN_SERVER_ADDR}" \
+     -u "${VPN_LOGIN_USER}"
+fi
 fi
