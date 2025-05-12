@@ -14,6 +14,8 @@ RUN apk add --no-cache \
     openconnect \
     openssh \
     vpnc \
+    socat \
+    mosh \
     openssh-server \
     bash \
     ca-certificates
