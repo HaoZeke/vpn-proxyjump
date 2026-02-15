@@ -32,10 +32,10 @@ RUN apk add --no-cache \
     bash \
     ca-certificates
 
-# Create a non-root user for SSH connections, then lock the account.
+# Create a non-root user for SSH connections.
+# -D means no password is set, so the account is already locked.
 # Public key authentication is the only way in.
-RUN adduser -g "${SSH_USER_NAME}" -D -s /bin/bash "${SSH_USER_NAME}" && \
-    passwd -l "${SSH_USER_NAME}"
+RUN adduser -g "${SSH_USER_NAME}" -D -s /bin/bash "${SSH_USER_NAME}"
 
 # Setup SSH for this user using the public key provided at build time
 RUN mkdir -p "/home/${SSH_USER_NAME}/.ssh" && \
@@ -77,7 +77,8 @@ EXPOSE 22
 ENV VPN_TYPE="openconnect"
 ENV OPENCONNECT_EXTRA_ARGS=""
 ENV FORTIGATE_EXTRA_ARGS=""
-ENV VPN_PASSWORD=""
+# VPN_PASSWORD is read by entrypoint.sh at runtime if set; not declared
+# as ENV to avoid the Docker secrets-in-env warning.
 ENV VPN_RECONNECT="true"
 ENV VPN_RECONNECT_DELAY="5"
 

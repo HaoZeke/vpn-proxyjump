@@ -1,0 +1,12 @@
+[workspace]
+name = "vpn-proxyjump"
+version = "1.0.0"
+description = "Alpine jumphost: OpenConnect/OpenFortiVPN + OpenSSH for ProxyJump"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
+
+[tasks]
+htmlize = "emacs --batch --load publish.el"
+
+[dependencies]
+emacs = ">=29"
