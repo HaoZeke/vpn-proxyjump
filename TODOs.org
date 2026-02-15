@@ -1,3 +1,0 @@
-* TODO Generalize to more VPNs
-* TODO More options
-* TODO Make a container
