@@ -5,12 +5,13 @@
 (setq org-html-head
       (concat
        "<link rel=\"stylesheet\" href=\"https://unpkg.com/@knadh/oat/oat.min.css\">\n"
+       "<script defer data-domain=\"vpnproxyjump\" src=\"https://analytics.turtletech.us/js/script.outbound-links.js\"></script>\n"
        "<style>\n"
        "/* Hide until JS restructures DOM into oat sidebar layout */\n"
        "body:not([data-sidebar-layout]) { opacity: 0; }\n"
        "pre { overflow-x: auto; }\n"
        "main > div { max-width: 55em; margin: 0 auto; padding: var(--space-3); }\n"
-       "#theme-toggle { background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 0.3rem; margin-left: auto; }\n"
+       "#theme-toggle { background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 0.3rem; margin-left: auto; color: inherit; }\n"
        "</style>\n"
        "<script>\n"
        "document.addEventListener('DOMContentLoaded', function() {\n"

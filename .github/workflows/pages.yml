@@ -29,6 +29,7 @@ jobs:
           pixi run htmlize
           mkdir -p _site
           mv readme.html _site/index.html
+          cp CNAME _site/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
