@@ -30,19 +30,28 @@ cleanup() {
     exit 0
 }
 
-# Returns password on stdout. Priority: file > env var > empty (interactive).
-get_vpn_password() {
+# Returns credentials on stdout (password, optionally followed by TOTP on next line).
+# Priority: file > env var > empty (interactive).
+get_vpn_credentials() {
     local password_file="/run/secrets/vpn_password"
+    local password=""
     if [ -f "${password_file}" ]; then
         log "Reading VPN password from ${password_file}"
-        cat "${password_file}"
-        return 0
+        password="$(cat "${password_file}")"
     elif [ -n "${VPN_PASSWORD:-}" ]; then
         log "Using VPN password from VPN_PASSWORD env var"
-        echo "${VPN_PASSWORD}"
-        return 0
+        password="${VPN_PASSWORD}"
+    else
+        return 1
     fi
-    return 1
+
+    if [ -n "${VPN_TOTP:-}" ]; then
+        log "Appending TOTP to credentials"
+        printf '%s\n%s\n' "${password}" "${VPN_TOTP}"
+    else
+        echo "${password}"
+    fi
+    return 0
 }
 
 start_vpn() {
@@ -50,7 +59,7 @@ start_vpn() {
     local password=""
     local has_password=0
 
-    if password="$(get_vpn_password)"; then
+    if credentials="$(get_vpn_credentials)"; then
         has_password=1
     fi
 
@@ -64,13 +73,13 @@ start_vpn() {
             fi
             if [ "${has_password}" -eq 1 ]; then
                 if [ -n "${OPENCONNECT_EXTRA_ARGS:-}" ]; then
-                    echo "${password}" | openconnect --passwd-on-stdin \
+                    printf '%s' "${credentials}" | openconnect --passwd-on-stdin \
                         "${VPN_SERVER}" \
                         -u "${VPN_USER}" \
                         --script=/etc/vpnc/vpnc-script \
                         ${OPENCONNECT_EXTRA_ARGS} &
                 else
-                    echo "${password}" | openconnect --passwd-on-stdin \
+                    printf '%s' "${credentials}" | openconnect --passwd-on-stdin \
                         "${VPN_SERVER}" \
                         -u "${VPN_USER}" \
                         --script=/etc/vpnc/vpnc-script &
