@@ -1,20 +1,11 @@
 # Usage:
 #   1. Copy and customise the environment variables below
-#   2. Set your public key:
-#        export PUB_KEY_CONTENT=$(cat ~/.ssh/id_ed25519.pub)
-#   3. docker compose up --build
-#
-# For non-interactive password, either:
-#   - Set VPN_PASSWORD in the environment section, OR
-#   - Place the password in ./secrets/vpn_password and uncomment the secrets/volumes lines
+#   2. docker compose up --build
 
 services:
   vpn-jumphost:
     build:
       context: .
-      args:
-        SSH_USER_NAME: jumphostuser
-        USER_PUBLIC_KEY: "${PUB_KEY_CONTENT}"
     # Or use a prebuilt image:
     # image: ghcr.io/haozeke/vpn-proxyjump:latest
     container_name: vpn-smart-jump-container
@@ -28,8 +19,11 @@ services:
       VPN_SERVER: "vpn.example.com"
       VPN_USER: "your_username"
       VPN_TYPE: "openconnect"           # or "openfortivpn"
+      SSH_USER_NAME: "jumpuser"         # SSH login username (created at runtime)
+      SSH_AUTHORIZED_KEY: "${SSH_AUTHORIZED_KEY}"  # set via: export SSH_AUTHORIZED_KEY="$(cat ~/.ssh/id_ed25519.pub)"
       OPENCONNECT_EXTRA_ARGS: ""        # e.g. "--useragent=AnyConnect"
       # VPN_PASSWORD: ""                # or use a secrets file (see below)
+      # VPN_TOTP: ""                    # TOTP code for two-factor (set VPN_RECONNECT=false)
       VPN_RECONNECT: "true"
       VPN_RECONNECT_DELAY: "5"
     # Uncomment for file-based password:

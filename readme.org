@@ -12,6 +12,8 @@ See [[https://rgoswami.me/posts/remote-access-cvpn/][this post]] for a more conv
 
 - *Multiple VPN backends*: OpenConnect (Cisco AnyConnect, Juniper, GlobalProtect, etc.) and OpenFortiVPN (FortiGate)
 - *SSH ProxyJump* with public key authentication
+- *Runtime configuration*: SSH user, public key, and all credentials passed at runtime (nothing baked at build time)
+- *TOTP support*: pipe password + TOTP to OpenConnect via =VPN_TOTP= env var
 - *Automatic reconnection* when the VPN tunnel drops
 - *Graceful shutdown* with proper signal handling
 - *Docker HEALTHCHECK* to monitor VPN tunnel status
@@ -23,19 +25,16 @@ See [[https://rgoswami.me/posts/remote-access-cvpn/][this post]] for a more conv
 
 ** Prerequisites
 
-- Docker (with =/dev/net/tun= available on the host)
+- Docker or Podman (with =/dev/net/tun= available on the host)
 - An SSH key pair
 
 ** Build
 
 #+begin_src bash
-export PUB_KEY_CONTENT=$(cat ~/.ssh/id_ed25519.pub)
-docker build \
-  --build-arg USER_PUBLIC_KEY="$PUB_KEY_CONTENT" \
-  --build-arg SSH_USER_NAME=jumphostuser \
-  --pull \
-  -t vpn-smart-jumphost:latest .
+docker build -t vpn-smart-jumphost:latest .
 #+end_src
+
+No build arguments needed. SSH user and public key are configured at runtime.
 
 ** Run
 
@@ -46,12 +45,35 @@ docker run --rm -it \
   --name vpn-smart-jump-container \
   -e VPN_SERVER="vpn.example.com" \
   -e VPN_USER="your_username" \
+  -e SSH_USER_NAME="your_ssh_user" \
+  -e SSH_AUTHORIZED_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
   -e OPENCONNECT_EXTRA_ARGS="--useragent=AnyConnect" \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun:/dev/net/tun \
   -p 127.0.0.1:2200:22 \
   vpn-smart-jumphost:latest
 #+end_src
+
+*** With TOTP (non-interactive two-factor)
+
+#+begin_src bash
+docker run --rm -d \
+  --name vpn-smart-jump-container \
+  -e VPN_SERVER="vpn.example.com" \
+  -e VPN_USER="your_username" \
+  -e VPN_PASSWORD="your_password" \
+  -e VPN_TOTP="123456" \
+  -e VPN_RECONNECT="false" \
+  -e SSH_USER_NAME="your_ssh_user" \
+  -e SSH_AUTHORIZED_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
+  -e OPENCONNECT_EXTRA_ARGS="--useragent=AnyConnect" \
+  --cap-add=NET_ADMIN \
+  --device=/dev/net/tun:/dev/net/tun \
+  -p 127.0.0.1:2200:22 \
+  vpn-smart-jumphost:latest
+#+end_src
+
+When =VPN_TOTP= is set, both password and TOTP are piped to OpenConnect via =--passwd-on-stdin=. Disable reconnection (=VPN_RECONNECT=false=) since TOTP codes expire after 30 seconds.
 
 *** OpenFortiVPN
 
@@ -61,6 +83,8 @@ docker run --rm -it \
   -e VPN_SERVER="vpn.example.com:10443" \
   -e VPN_USER="your_username" \
   -e VPN_TYPE="openfortivpn" \
+  -e SSH_USER_NAME="your_ssh_user" \
+  -e SSH_AUTHORIZED_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun:/dev/net/tun \
   -p 127.0.0.1:2200:22 \
@@ -72,31 +96,26 @@ docker run --rm -it \
 Copy =docker-compose.yml= and edit the environment variables, then:
 
 #+begin_src bash
-export PUB_KEY_CONTENT=$(cat ~/.ssh/id_ed25519.pub)
 docker compose up --build
 #+end_src
 
 * Configuration
 
-** Build Arguments
-
-| Argument          | Default          | Description                          |
-|-------------------+------------------+--------------------------------------|
-| =SSH_USER_NAME=   | =jumphostuser=   | Username for SSH connections         |
-| =USER_PUBLIC_KEY= | /(required)/     | Content of your SSH public key file  |
-
 ** Environment Variables
 
-| Variable                  | Default        | Description                                            |
-|---------------------------+----------------+--------------------------------------------------------|
-| =VPN_SERVER=              | /(required)/   | VPN server hostname or IP (with port for openfortivpn) |
-| =VPN_USER=                | /(required)/   | VPN username                                           |
-| =VPN_TYPE=                | =openconnect=  | VPN backend: =openconnect= or =openfortivpn=          |
-| =VPN_PASSWORD=            | /(empty)/      | VPN password via env var (see [[*VPN Password]])             |
-| =OPENCONNECT_EXTRA_ARGS=  | /(empty)/      | Additional flags passed to =openconnect=               |
-| =FORTIGATE_EXTRA_ARGS=    | /(empty)/      | Additional flags passed to =openfortivpn=              |
-| =VPN_RECONNECT=           | =true=         | Auto-reconnect when VPN disconnects                    |
-| =VPN_RECONNECT_DELAY=     | =5=            | Seconds to wait between reconnection attempts          |
+| Variable                  | Default       | Description                                            |
+|---------------------------+---------------+--------------------------------------------------------|
+| =VPN_SERVER=              | /(required)/  | VPN server hostname or IP (with port for openfortivpn) |
+| =VPN_USER=                | /(required)/  | VPN username                                           |
+| =VPN_TYPE=                | =openconnect= | VPN backend: =openconnect= or =openfortivpn=          |
+| =VPN_PASSWORD=            | /(empty)/     | VPN password via env var (see [[*VPN Password]])             |
+| =VPN_TOTP=                | /(empty)/     | TOTP code for two-factor auth (piped after password)   |
+| =SSH_USER_NAME=           | =jumpuser=    | Username for SSH connections (created at runtime)      |
+| =SSH_AUTHORIZED_KEY=      | /(empty)/     | SSH public key content for authentication              |
+| =OPENCONNECT_EXTRA_ARGS=  | /(empty)/     | Additional flags passed to =openconnect=               |
+| =FORTIGATE_EXTRA_ARGS=    | /(empty)/     | Additional flags passed to =openfortivpn=              |
+| =VPN_RECONNECT=           | =true=        | Auto-reconnect when VPN disconnects                    |
+| =VPN_RECONNECT_DELAY=     | =5=           | Seconds to wait between reconnection attempts          |
 
 ** VPN Password
 
@@ -114,6 +133,8 @@ docker run --rm -it \
   -v ./secrets/vpn_password:/run/secrets/vpn_password:ro \
   -e VPN_SERVER="vpn.example.com" \
   -e VPN_USER="your_username" \
+  -e SSH_USER_NAME="your_ssh_user" \
+  -e SSH_AUTHORIZED_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun:/dev/net/tun \
   -p 127.0.0.1:2200:22 \
@@ -125,7 +146,7 @@ docker run --rm -it \
 Once the container is running, connect via:
 
 #+begin_src bash
-ssh jumphostuser@localhost -p 2200
+ssh your_ssh_user@localhost -p 2200
 #+end_src
 
 For seamless access to hosts behind the VPN, add entries to =~/.ssh/config=:
@@ -135,7 +156,7 @@ For seamless access to hosts behind the VPN, add entries to =~/.ssh/config=:
 Host vpn-docker-jump
     HostName 127.0.0.1
     Port 2200
-    User jumphostuser
+    User your_ssh_user
     IdentitiesOnly yes
     IdentityFile ~/.ssh/id_ed25519
 
@@ -184,7 +205,7 @@ docker run --rm -it \
   vpn-smart-jumphost:latest
 
 # Then connect with mosh
-mosh --ssh="ssh -p 2200" jumphostuser@localhost
+mosh --ssh="ssh -p 2200" your_ssh_user@localhost
 #+end_src
 
 ** HEALTHCHECK
@@ -220,12 +241,19 @@ docker pull ghcr.io/haozeke/vpn-proxyjump:latest
 docker pull haozeke/vpn-proxyjump:latest
 #+end_src
 
-*Note*: Pre-built images contain a placeholder SSH key. You should either:
-- Build locally with your own =USER_PUBLIC_KEY= (recommended), or
-- Mount your own =authorized_keys= file at runtime:
-  #+begin_src bash
-  -v ~/.ssh/id_ed25519.pub:/home/jumphostuser/.ssh/authorized_keys:ro
-  #+end_src
+Pre-built images work out of the box -- pass =SSH_AUTHORIZED_KEY= at runtime:
+
+#+begin_src bash
+docker run --rm -it \
+  -e SSH_USER_NAME="myuser" \
+  -e SSH_AUTHORIZED_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
+  -e VPN_SERVER="vpn.example.com" \
+  -e VPN_USER="your_username" \
+  --cap-add=NET_ADMIN \
+  --device=/dev/net/tun:/dev/net/tun \
+  -p 127.0.0.1:2200:22 \
+  ghcr.io/haozeke/vpn-proxyjump:latest
+#+end_src
 
 * CI/CD
 
@@ -261,14 +289,29 @@ The VPN client needs to create network interfaces and modify routing tables. Alw
 
 Check that:
 1. The container's SSH daemon is listening: =docker exec <container> ss -tlnp | grep 22=
-2. Your SSH key matches the one used at build time
+2. =SSH_AUTHORIZED_KEY= was set and matches your private key
 3. The port mapping is correct (=-p 127.0.0.1:2200:22=)
+4. The account is not locked: =docker exec <container> passwd -S your_ssh_user= (should show =P= or =NP=, not =L=)
 
 ** Reconnection with interactive password
 
 When =VPN_RECONNECT=true= and no stored password is available, the VPN client will prompt for a password again on each reconnection. This requires the container to be running with =-it=. For unattended operation, use a password file or environment variable.
 
+** TOTP and reconnection
+
+=VPN_TOTP= codes expire after 30 seconds. Set =VPN_RECONNECT=false= when using TOTP, otherwise reconnection attempts will fail with a stale code.
+
 * Changelog
+
+** v2.0.0 (breaking)
+
+- *Runtime SSH configuration*: SSH user and public key are now set via =SSH_USER_NAME= and =SSH_AUTHORIZED_KEY= environment variables at runtime. No more =--build-arg USER_PUBLIC_KEY= or =SSH_USER_NAME= at build time.
+- *TOTP support*: =VPN_TOTP= env var pipes TOTP after password for two-factor VPN auth.
+- *Fixed locked account*: Alpine =adduser -D= creates locked accounts; OpenSSH 10 rejects pubkey auth for locked accounts. The entrypoint now unlocks the account.
+- *Fixed log pollution*: =log()= writes to stderr, preventing credential pipe corruption.
+- *Clean sshd_config*: replaced fragile =sed= commands (broken ERE syntax) with a direct config write.
+- *Simplified Dockerfile*: no =openssh-server-pam= (=UsePAM= not supported), added =shadow= (for =passwd -u=).
+- Credential piping refactored: =emit_credentials= pipes directly to openconnect (no variable capture).
 
 ** v1.0.0
 
@@ -280,9 +323,6 @@ When =VPN_RECONNECT=true= and no stored password is available, the VPN client wi
 - Added =docker-compose.yml= example
 - Added GitHub Actions CI/CD for multi-arch builds (GHCR + Docker Hub)
 - Added =socat= and =mosh= documentation
-- Reduced SSH =LogLevel= from =DEBUG3= to =INFO=
-- Locked SSH user account (public key auth only, removed =PASS= build arg)
-- Changed =PasswordAuthentication= to =no=
 
 * License
 
