@@ -3,7 +3,7 @@ FROM alpine:latest
 LABEL maintainer="rgoswami[at]ieee[dot]org"
 LABEL description="Alpine jumphost: OpenConnect/OpenFortiVPN + OpenSSH server for ProxyJump."
 LABEL org.opencontainers.image.source="https://github.com/HaoZeke/vpn-proxyjump"
-LABEL org.opencontainers.image.version="2.0.0"
+LABEL org.opencontainers.image.version="2.1.0"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Add edge/testing repo for openfortivpn

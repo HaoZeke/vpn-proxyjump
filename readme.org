@@ -165,6 +165,25 @@ docker run --rm -it \
 mosh --ssh="ssh -p 2200" jumpuser@localhost
 #+end_src
 
+** Persistent SSH host keys
+
+By default the container generates SSH host keys on first start. Mount a named volume to persist them across container restarts and image rebuilds, avoiding =known_hosts= mismatches:
+
+#+begin_src bash
+docker run --rm -d \
+  -v ssh-host-keys:/etc/ssh/host_keys \
+  -e VPN_SERVER="vpn.example.com" \
+  -e VPN_USER="your_username" \
+  -e SSH_USER_NAME="jumpuser" \
+  -e SSH_AUTHORIZED_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
+  --cap-add=NET_ADMIN \
+  --device=/dev/net/tun:/dev/net/tun \
+  -p 127.0.0.1:2200:22 \
+  ghcr.io/haozeke/vpn-proxyjump:main
+#+end_src
+
+Keys are generated once on first run and reused on subsequent starts. To force new keys, remove the volume: =docker volume rm ssh-host-keys=.
+
 ** docker-compose
 
 Copy =docker-compose.yml=, set =SSH_AUTHORIZED_KEY= in your environment:
@@ -231,7 +250,7 @@ GitHub Actions workflow builds multi-arch images (=linux/amd64=, =linux/arm64=) 
 | Symptom                    | Cause                           | Fix                                                       |
 |----------------------------+---------------------------------+-----------------------------------------------------------|
 | VPN connects, SSH rejected | Account locked (OpenSSH 10+)    | Entrypoint unlocks automatically. Check =passwd -S user=  |
-| SSH host key changed       | Container rebuilt                | =ssh-keygen -R "[127.0.0.1]:2200"=                       |
+| SSH host key changed       | Container rebuilt without volume | Mount =-v ssh-host-keys:/etc/ssh/host_keys= for persistence |
 | Too many auth failures     | SSH agent offers many keys       | Use =IdentitiesOnly yes= in SSH config                    |
 | VPN "Login failed"         | Credentials not piped correctly  | Check =podman logs= for log lines in credential pipe     |
 | TOTP reconnect fails       | Stale TOTP code                  | Set =VPN_RECONNECT=false=, restart with fresh code        |
@@ -239,6 +258,11 @@ GitHub Actions workflow builds multi-arch images (=linux/amd64=, =linux/arm64=) 
 | =/proc/.../flush= errors   | Read-only /proc in container     | Harmless, does not affect VPN                              |
 
 * Changelog
+
+** v2.1.0
+
+- SSH host keys generated at runtime instead of build time. Mount =/etc/ssh/host_keys= as a named volume for persistence across image rebuilds.
+- Fixes =known_hosts= mismatch every time the GHCR image is rebuilt by CI.
 
 ** v2.0.0 (breaking)
 
