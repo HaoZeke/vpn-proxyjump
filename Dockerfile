@@ -44,8 +44,8 @@ ClientAliveCountMax 3
 LogLevel INFO
 SSHD
 
-# Generate SSH host keys
-RUN ssh-keygen -A
+# Host keys generated at runtime (entrypoint) so they persist across
+# image rebuilds when /etc/ssh/host_keys is volume-mounted.
 
 # Expose the SSH port
 EXPOSE 22

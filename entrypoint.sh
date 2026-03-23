@@ -157,6 +157,21 @@ elif [ ! -f "${SSH_AUTH_FILE}" ] || [ ! -s "${SSH_AUTH_FILE}" ]; then
     log "SSH access will not work. Set -e SSH_AUTHORIZED_KEY=\"ssh-ed25519 ...\""
 fi
 
+# Generate host keys at runtime if not already present (allows volume persistence)
+HOST_KEY_DIR="/etc/ssh/host_keys"
+mkdir -p "${HOST_KEY_DIR}"
+for type in rsa ecdsa ed25519; do
+    keyfile="${HOST_KEY_DIR}/ssh_host_${type}_key"
+    if [ ! -f "${keyfile}" ]; then
+        ssh-keygen -t "${type}" -f "${keyfile}" -N "" -q
+        log "Generated SSH host key: ${keyfile}"
+    fi
+done
+# Point sshd at the persistent key directory
+for type in rsa ecdsa ed25519; do
+    echo "HostKey ${HOST_KEY_DIR}/ssh_host_${type}_key" >> /etc/ssh/sshd_config
+done
+
 log "Starting SSH daemon..."
 /usr/sbin/sshd -e
 log "SSH daemon started."
