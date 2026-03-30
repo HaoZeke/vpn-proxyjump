@@ -6,6 +6,7 @@
       (concat
        "<link rel=\"stylesheet\" href=\"https://unpkg.com/@knadh/oat/oat.min.css\">\n"
        "<script defer src=\"https://analytics.turtletech.us/script.js\" data-website-id=\"95d3a0c3-ed28-473d-95dc-9fdb1dcbec9e\"></script>\n"
+"<script defer src=\"https://antics-api.turtletech.us/antics.js\"></script>\n"
        "<script>window.umami=window.umami||{track:function(){}};document.addEventListener('click',function(e){var a=e.target.closest('a');if(a&&a.hostname!==location.hostname)umami.track('Outbound Link',{url:a.href})});</script>\n"
        "<style>\n"
        "/* Hide until JS restructures DOM into oat sidebar layout */\n"
